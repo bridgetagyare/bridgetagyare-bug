@@ -17,6 +17,7 @@ from fms.datasets.util import SavableDataset
 from fms.utils import generation, print0
 from fms.utils.tokenizers import BaseTokenizer
 
+import csv
 
 class TrainerPlugin:
     """
@@ -141,6 +142,13 @@ class MetricReporter(TrainerPlugin):
         self.group = group
         self.writer = writer
 
+        self.csv_file = "files.csv"
+        with open(self.csv_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            if f.tell() == 0:
+                writer.writerow(["epoch", "step", "loss", "avg_loss", "tok/stp", "s/stp", "tok/gpu/s", "cum_tokens"])
+                #writer.writerow(["epoch", "step"])
+
     def step(
         self, epoch: int, step: int, metrics: Dict = {}, end_of_epoch: bool = False
     ):
@@ -205,6 +213,17 @@ class MetricReporter(TrainerPlugin):
 
         to_report.update(more_metrics)
         self.writer(epoch, step, current_time, to_report)
+
+        loss = to_report.get('loss', 'N/A')
+        avg_loss = to_report.get('avg_loss', 'N/A')
+        tok_stp = to_report.get('tok/stp', 'N/A')
+        s_stp = to_report.get('s/stp', 'N/A')
+        tok_gpu_s = to_report.get('tok/gpu/s', 'N/A')
+        cum_tokens = to_report.get('cum_tokens', 'N/A')
+
+        with open(self.csv_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([epoch, step, loss, avg_loss, tok_stp, s_stp, tok_gpu_s, cum_tokens])
 
 
 class Checkpointer(TrainerPlugin):
